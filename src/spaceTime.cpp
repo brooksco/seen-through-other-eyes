@@ -12,28 +12,29 @@
 void spaceTime::update() {
     
     if (opacities.size() > 0) {
-    
-    // Has one extra element in it for the text
-    for (int i = opacities.size(); i >= 0; i--) {
         
-        if (opacities[i] < 255) {
+        // Has one extra element in it for the text
+        for (int i = opacities.size(); i >= 0; i--) {
             
-            if ((i - 1 >= 0)) {
+            if (opacities[i] < 255) {
                 
-                if (opacities[i - 1] >= 255) {
+                if ((i - 1 >= 0)) {
+                    
+                    if (opacities[i - 1] >= 255) {
+                        opacities[i] += 5;
+                    }
+                    
+                } else {
                     opacities[i] += 5;
                 }
                 
             } else {
-                opacities[i] += 5;
+                break;
             }
             
-        } else {
-            break;
         }
-        
     }
-    }
+    
 }
 
 void spaceTime::draw() {
@@ -61,5 +62,5 @@ void spaceTime::draw() {
     
     ofSetColor(255, 255, 255, opacities[0]);
     font.drawString(time + "\n" + location, 20, ofGetWindowHeight() - 80);
-
+    
 }

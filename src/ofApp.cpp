@@ -7,7 +7,11 @@ int locationCount = 0;
 int totalLocations = 0;
 ofTrueTypeFont font;
 
+int timeTravelCount = 0;
+int maxHistory = 10;
+
 bool nextBool = false;
+bool previousBool = false;
 bool showGui = false;
 
 
@@ -21,9 +25,9 @@ void ofApp::setup(){
     
     font.load("Lato-Regular.ttf", 30);
     
-
+    
     // Initial test generation
-//    generate(408106549, -739605501, 1464897070527);
+    //    generate(408106549, -739605501, 1464897070527);
     nextBool = true;
     
     // Setup GUI
@@ -43,15 +47,15 @@ void ofApp::setup(){
     // Load previous settings
     gui.loadFromFile("settings.xml");
     
-//    locationData.open("LocationHistory.json");
+    //    locationData.open("LocationHistory.json");
     
     if (!locationData.open("smallLocationHistory.json")) {
-//    if (!locationData.open("LocationHistory.json")) {
+        //    if (!locationData.open("LocationHistory.json")) {
         ofLogNotice("ofApp::setup") << "Failed to parse JSON";
         cout << "Failure to open location data" << endl;
         
     } else {
-         cout << "Loaded location data" << endl;
+        cout << "Loaded location data" << endl;
     }
     
     cout << "LOCATION DATA" << endl;
@@ -59,10 +63,10 @@ void ofApp::setup(){
     
     totalLocations = locationData["locations"].size();
     
-//    for (int i = 0; i < locationData["locations"].size(); i += 1000) {
-//        
-//    }
-
+    //    for (int i = 0; i < locationData["locations"].size(); i += 1000) {
+    //
+    //    }
+    
     
 }
 
@@ -71,7 +75,7 @@ void ofApp::generate(float lat, float lon, double time) {
     
     string fUrl = flickrUrl(lat, lon, time);
     string mUrl = mapsUrl(lat, lon);
-
+    
     if (!mapsResponse.open(mUrl)) {
         ofLogNotice("ofApp::setup") << "Failed to parse JSON";
         cout << "some maps failure" << endl;
@@ -88,7 +92,7 @@ void ofApp::generate(float lat, float lon, double time) {
     
     for (int i = 0; i < mapsResponse["results"].size(); i++) {
         
-//        cout << mapsResponse["results"][i]["address_components"] << endl;
+        //        cout << mapsResponse["results"][i]["address_components"] << endl;
         
         for (int j = 0; j < mapsResponse["results"][i]["address_components"].size(); j++) {
             
@@ -117,7 +121,7 @@ void ofApp::generate(float lat, float lon, double time) {
     } else {
         locationText = localityText + ".";
     }
-
+    
     
     cout << "SUBLOCALITY" << endl;
     cout << sublocality << endl;
@@ -188,13 +192,22 @@ void ofApp::generate(float lat, float lon, double time) {
     currentSpaceTime.images = images;
     currentSpaceTime.positions = imagePositions;
     currentSpaceTime.opacities = opacities;
+    
+    spaceTimes.push_front(currentSpaceTime);
+    
+    if (spaceTimes.size() > maxHistory) {
+        spaceTimes.pop_back();
+    }
 }
+
 
 
 //--------------------------------------------------------------
 void ofApp::update(){
     
-    currentSpaceTime.update();
+    if (spaceTimes.size() > 0) {
+        spaceTimes[timeTravelCount].update();
+    }
     
     // Change on a timer, this is limited by the Google Maps API 2500 request a day maximum. So 1 every ~35 seconds
     if ((ofGetFrameNum() % (24 * 60)) == 0) {
@@ -213,9 +226,9 @@ void ofApp::update(){
         float nextLon = locationData["locations"][nextLocation]["longitudeE7"].asFloat();
         double nextTime = stod(locationData["locations"][nextLocation]["timestampMs"].asString());
         
-        
         generate(nextLat, nextLon, nextTime);
     }
+    
     
 }
 
@@ -226,8 +239,7 @@ void ofApp::draw(){
     
     ofBackground(0);
     
-    currentSpaceTime.draw();
-
+    spaceTimes[timeTravelCount].draw();
     
     
     // Show the GUI if we want it
@@ -235,6 +247,8 @@ void ofApp::draw(){
         gui.draw();
     }
 }
+
+
 
 //--------------------------------------------------------------
 string ofApp::flickrUrl(float lat, float lon, double time){
@@ -266,7 +280,7 @@ string ofApp::flickrUrl(float lat, float lon, double time){
     // Add decimal points, since location data doesn't come with them
     sLat.insert((sLat.size() - 7), ".");
     sLon.insert((sLon.size() - 7), ".");
-
+    
     
     // In KM
     string radius = "2";
@@ -281,7 +295,7 @@ string ofApp::flickrUrl(float lat, float lon, double time){
 
 //--------------------------------------------------------------
 string ofApp::mapsUrl(float lat, float lon){
-
+    
     string apiKey = "AIzaSyBfDv2ODxWsEUXh0uIbKFuOX7RcaqmsQF8";
     
     // Convert to string and set precision (4 is max for Flickr api)
@@ -324,7 +338,25 @@ void ofApp::keyPressed(int key){
     }
     
     if (key == OF_KEY_RIGHT) {
-        nextBool = true;
+        // If the count is over 0 we're back in time
+        if (timeTravelCount > 0) {
+            
+            timeTravelCount -= 1;
+            
+        } else {
+            nextBool = true;
+        }
+        
+    }
+    
+    if (key == OF_KEY_LEFT) {
+        //        previousBool = true;
+        
+        if (timeTravelCount < (spaceTimes.size() - 1)) {
+            timeTravelCount += 1;
+        }
+        
+        
     }
     
 }

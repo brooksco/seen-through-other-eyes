@@ -47,6 +47,11 @@ public:
     string locationText;
     string timeText;
     
+    
+    int timeTravelCount;
+    deque<spaceTime> spaceTimes;
+    
+    spaceTime previousSpaceTime;
     spaceTime currentSpaceTime;
     spaceTime nextSpaceTime;
     
