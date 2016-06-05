@@ -17,9 +17,13 @@ public:
     
     // Methods
     void draw();
+    void update();
     
     // Variables
-    std::vector<ofImage> images;
+    vector<ofImage> images;
+    vector<ofVec2f> positions;
+    vector<float> opacities;
+    
     string location;
     string time;
     

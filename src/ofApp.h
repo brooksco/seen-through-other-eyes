@@ -42,7 +42,8 @@ public:
     string localityText;
     string sublocalityText;
     
-    std::vector<ofImage> images;
+    vector<ofImage> images;
+    vector<ofVec2f> imagePositions;
     string locationText;
     string timeText;
     
@@ -66,3 +67,10 @@ public:
     
     
 };
+
+extern int offsetX;
+extern int offsetY;
+extern int maxImages;
+extern int locationCount;
+extern int totalLocations;
+extern ofTrueTypeFont font;

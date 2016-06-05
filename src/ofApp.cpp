@@ -23,8 +23,8 @@ void ofApp::setup(){
     
 
     // Initial test generation
-    generate(408106549, -739605501, 1464897070527);
-    
+//    generate(408106549, -739605501, 1464897070527);
+    nextBool = true;
     
     // Setup GUI
     int guiWidth = 300;
@@ -45,8 +45,8 @@ void ofApp::setup(){
     
 //    locationData.open("LocationHistory.json");
     
-//    if (!locationData.open("smallLocationHistory.json")) {
-    if (!locationData.open("LocationHistory.json")) {
+    if (!locationData.open("smallLocationHistory.json")) {
+//    if (!locationData.open("LocationHistory.json")) {
         ofLogNotice("ofApp::setup") << "Failed to parse JSON";
         cout << "Failure to open location data" << endl;
         
@@ -140,6 +140,10 @@ void ofApp::generate(float lat, float lon, double time) {
     cout << flickrResponse << endl;
     
     images.clear();
+    imagePositions.clear();
+    vector<float> opacities;
+    // Push back an extra value for the text
+    opacities.push_back(0);
     
     for (int i = 0; i < numImages; ++i) {
         
@@ -152,6 +156,21 @@ void ofApp::generate(float lat, float lon, double time) {
         ofImage img;
         img.loadImage(url);
         images.push_back(img);
+        
+        // - 250 because images are max 500 x 500 it seems from flickr
+        int rX = ofRandom(ofGetWindowWidth()) - 250;
+        int rY = ofRandom(ofGetWindowHeight()) - 250;
+        
+        // Keep re-rolling for new coordinates if it looks like it's gonna overlap the text too much
+        // - 600 because it's image height, 500, and a buffer for the text
+        while ( (rX < (ofGetWindowWidth() / 2)) && (rY > (ofGetWindowHeight() - (600))) ) {
+            rX = ofRandom(ofGetWindowWidth()) - 250;
+            rY = ofRandom(ofGetWindowHeight()) - 250;
+        }
+        
+        imagePositions.push_back(ofVec2f(rX, rY));
+        
+        opacities.push_back(0);
     }
     
     // Put together the time text
@@ -167,16 +186,20 @@ void ofApp::generate(float lat, float lon, double time) {
     currentSpaceTime.location = locationText;
     currentSpaceTime.time = timeText;
     currentSpaceTime.images = images;
+    currentSpaceTime.positions = imagePositions;
+    currentSpaceTime.opacities = opacities;
 }
-
-
-
-// goog api key AIzaSyBfDv2ODxWsEUXh0uIbKFuOX7RcaqmsQF8
-// https://maps.googleapis.com/maps/api/geocode/json?latlng=40.714224,-73.961452&key=YOUR_API_KEY
 
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    
+    currentSpaceTime.update();
+    
+    // Change on a timer, this is limited by the Google Maps API 2500 request a day maximum. So 1 every ~35 seconds
+    if ((ofGetFrameNum() % (24 * 60)) == 0) {
+        nextBool = true;
+    }
     
     if (nextButton || nextBool) {
         nextBool = false;
@@ -192,13 +215,6 @@ void ofApp::update(){
         
         
         generate(nextLat, nextLon, nextTime);
-        
-//        string temp = "";
-        
-//        generate(477028325, -1222847319, 1396489565587);
-        //        "timestampMs" : "1396489565587",
-        //        "latitudeE7" : 477028325,
-        //        "longitudeE7" : -1222847319,
     }
     
 }
@@ -210,29 +226,8 @@ void ofApp::draw(){
     
     ofBackground(0);
     
-    offsetX = 0;
-    offsetY = 0;
+    currentSpaceTime.draw();
 
-    if (images.size() > 0) {
-        
-        int count = MIN(maxImages, images.size());
-        
-        for (std::size_t i = 0; i < count; ++i) {
-            
-            images[i].draw(offsetX, offsetY);
-//            images[i].draw(offsetX, i * 100);
-            
-            offsetX += images[i].getWidth();
-            
-            if (offsetX + images[i].getWidth() > ofGetWindowWidth()) {
-                offsetX = 0;
-                offsetY += images[i].getHeight();
-            }
-        }
-    }
-    
-    
-    font.drawString(timeText + "\n" + locationText, 20, ofGetWindowHeight() - 80);
     
     
     // Show the GUI if we want it
@@ -286,7 +281,7 @@ string ofApp::flickrUrl(float lat, float lon, double time){
 
 //--------------------------------------------------------------
 string ofApp::mapsUrl(float lat, float lon){
-    
+
     string apiKey = "AIzaSyBfDv2ODxWsEUXh0uIbKFuOX7RcaqmsQF8";
     
     // Convert to string and set precision (4 is max for Flickr api)
