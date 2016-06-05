@@ -18,6 +18,7 @@ public:
     
     string flickrUrl(float lat, float lon, double time);
     string mapsUrl(float lat, float lon);
+    string timezoneUrl(float lat, float lon, double time);
     
     bool in_array(const string &value, const std::vector<string> &array);
     
@@ -38,6 +39,7 @@ public:
     
     ofxJSONElement flickrResponse;
     ofxJSONElement mapsResponse;
+    ofxJSONElement timezoneResponse;
     
     string localityText;
     string sublocalityText;

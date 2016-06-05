@@ -27,7 +27,7 @@ void ofApp::setup(){
     
     
     // Initial test generation
-    //    generate(408106549, -739605501, 1464897070527);
+//        generate(408106549, -739605501, 1464897070527);
     nextBool = true;
     
     // Setup GUI
@@ -50,7 +50,7 @@ void ofApp::setup(){
     //    locationData.open("LocationHistory.json");
     
     if (!locationData.open("smallLocationHistory.json")) {
-        //    if (!locationData.open("LocationHistory.json")) {
+//            if (!locationData.open("LocationHistory.json")) {
         ofLogNotice("ofApp::setup") << "Failed to parse JSON";
         cout << "Failure to open location data" << endl;
         
@@ -75,6 +75,10 @@ void ofApp::generate(float lat, float lon, double time) {
     
     string fUrl = flickrUrl(lat, lon, time);
     string mUrl = mapsUrl(lat, lon);
+    string tzUrl = timezoneUrl(lat, lon, time);
+    
+    
+    // Maps response
     
     if (!mapsResponse.open(mUrl)) {
         ofLogNotice("ofApp::setup") << "Failed to parse JSON";
@@ -84,10 +88,10 @@ void ofApp::generate(float lat, float lon, double time) {
     cout << "MAPS RESPONSE" << endl;
     cout << mapsResponse << endl;
     
-    // Maps response
-    
     string sublocality = "";
     string locality = "";
+    string country = "";
+    string areaLevel1 = "";
     locationText = "";
     
     for (int i = 0; i < mapsResponse["results"].size(); i++) {
@@ -105,21 +109,35 @@ void ofApp::generate(float lat, float lon, double time) {
                     
                 } else if (type == "locality") {
                     locality = mapsResponse["results"][i]["address_components"][j]["long_name"].asString();
+                    
+                } else if (type == "country") {
+                    country = mapsResponse["results"][i]["address_components"][j]["short_name"].asString();
+                    
+                } else if (type == "administrative_area_level_1") {
+                    areaLevel1 = mapsResponse["results"][i]["address_components"][j]["long_name"].asString();
+                    
                 }
+                
             }
             
         }
         
     }
     
+    
+    string formattedAddress = mapsResponse["results"][0]["formatted_address"].asString();
     localityText = locality;
     sublocalityText = sublocality;
+    if (country == "US") {
+        country = "USA";
+    }
     
     if (sublocalityText != "") {
-        locationText = sublocalityText + ", " + localityText + ".";
+        locationText = sublocalityText + ", " + localityText + ", " + country + ".";
         
     } else {
-        locationText = localityText + ".";
+//        locationText = localityText + ", " + country + ".";
+        locationText = localityText + ", " + areaLevel1 + ", " + country + ".";
     }
     
     
@@ -177,9 +195,28 @@ void ofApp::generate(float lat, float lon, double time) {
         opacities.push_back(0);
     }
     
+    
+    // Timezone response
+    
+    if (!timezoneResponse.open(tzUrl)) {
+        ofLogNotice("ofApp::setup") << "Failed to parse JSON";
+        cout << "some timezone failure" << endl;
+    }
+    
+    cout << "TIMEZONE RESPONSE" << endl;
+    cout << timezoneResponse << endl;
+    
+    int dstOffset = 0;
+    int rawOffset = 0;
+    
+    dstOffset = timezoneResponse["dstOffset"].asInt();
+    rawOffset = timezoneResponse["rawOffset"].asInt();
+    
+    
     // Put together the time text
-    time_t t = (time / 1000);
-    struct tm *tm = localtime(&t);
+    time_t t = (time / 1000) + dstOffset + rawOffset;
+//    struct tm *tm = localtime(&t);
+    struct tm *tm = gmtime(&t);
     char buffer[40];
     
     strftime(buffer, 40, "%A, %B %d %G, %I:%M%p.", tm);
@@ -227,6 +264,8 @@ void ofApp::update(){
         double nextTime = stod(locationData["locations"][nextLocation]["timestampMs"].asString());
         
         generate(nextLat, nextLon, nextTime);
+//        generate(407128000, -740059000, 1465159094000);
+        // 408106549, -739605501
     }
     
     
@@ -294,12 +333,44 @@ string ofApp::flickrUrl(float lat, float lon, double time){
 }
 
 //--------------------------------------------------------------
+string ofApp::timezoneUrl(float lat, float lon, double time){
+    
+    string apiKey = "AIzaSyBfDv2ODxWsEUXh0uIbKFuOX7RcaqmsQF8";
+    stringstream stream;
+    
+    stream << fixed << setprecision(0) << (time / 1000);
+    string sTime = stream.str();
+    
+    stream.str("");
+    stream << fixed << setprecision(0) << lat;
+    string sLat = stream.str();
+    
+    stream.str("");
+    stream << fixed << setprecision(0) << lon;
+    string sLon = stream.str();
+    
+    // Add decimal points, since location data doesn't come with them
+    sLat.insert((sLat.size() - 7), ".");
+    sLon.insert((sLon.size() - 7), ".");
+    
+    
+    string url = "https://maps.googleapis.com/maps/api/timezone/json?location=" + sLat + "," + sLon + "&timestamp=" + sTime + "&key=" + apiKey;
+    
+    cout << "TIMEZONE URL" << endl;
+    cout << url << endl;
+    
+    return url;
+
+    
+}
+
+//--------------------------------------------------------------
 string ofApp::mapsUrl(float lat, float lon){
     
     string apiKey = "AIzaSyBfDv2ODxWsEUXh0uIbKFuOX7RcaqmsQF8";
+    stringstream stream;
     
     // Convert to string and set precision (4 is max for Flickr api)
-    stringstream stream;
     stream << fixed << setprecision(0) << lat;
     string sLat = stream.str();
     
